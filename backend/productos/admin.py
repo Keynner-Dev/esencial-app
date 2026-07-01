@@ -12,9 +12,9 @@ class CategoriaAdmin(admin.ModelAdmin):
 @admin.register(Producto)
 class ProductoAdmin(admin.ModelAdmin):
     list_display = (
-        'nombre', 'categoria', 'tipo_producto', 'unidad_medida',
+        'nombre', 'categoria', 'tipo_producto', 'subtipo_insumo', 'unidad_medida',
         'costo_compra', 'precio_detal', 'precio_mayorista',
         'disponible_mayorista', 'stock_actual', 'activo',
     )
-    list_filter = ('tipo_producto', 'categoria', 'disponible_mayorista', 'activo')
+    list_filter = ('tipo_producto', 'subtipo_insumo', 'categoria', 'disponible_mayorista', 'activo')
     search_fields = ('nombre',)
