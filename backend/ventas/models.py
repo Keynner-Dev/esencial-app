@@ -25,6 +25,7 @@ class Venta(models.Model):
     forma_pago = models.CharField(max_length=10, choices=FormaPago.choices)
     fecha = models.DateField()
     total = models.PositiveIntegerField(default=0, editable=False)
+    pagada_en_caja = models.BooleanField(default=False, editable=False)
     observaciones = models.CharField(max_length=255, blank=True, null=True)
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='ventas_registradas'
@@ -53,6 +54,26 @@ class Venta(models.Model):
         total_perfumes = self.items_perfume.aggregate(suma=models.Sum('subtotal'))['suma'] or 0
         self.total = total_productos + total_perfumes
         self.save(update_fields=['total'])
+
+    def registrar_pago_caja(self):
+        """
+        Se llama UNA SOLA VEZ, después de haber creado todos los items de la venta
+        (esto lo dispara la vista de la API, no el usuario manualmente).
+        Si la venta es a crédito o ya se registró antes, no hace nada.
+        """
+        if self.forma_pago != self.FormaPago.CONTADO or self.pagada_en_caja or self.total == 0:
+            return
+
+        from caja.models import MovimientoCaja
+        MovimientoCaja.objects.create(
+            tipo_movimiento=MovimientoCaja.TipoMovimiento.ENTRADA,
+            origen=MovimientoCaja.Origen.VENTA_CONTADO,
+            monto=self.total,
+            documento_referencia=f'Venta #{self.pk}',
+            usuario=self.usuario,
+        )
+        self.pagada_en_caja = True
+        self.save(update_fields=['pagada_en_caja'])
 
 
 class DetalleVentaProducto(models.Model):

@@ -26,12 +26,18 @@ class Proveedor(models.Model):
 
 
 class Factura(models.Model):
+    class FormaPago(models.TextChoices):
+        CONTADO = 'CONTADO', 'Contado'
+        CREDITO = 'CREDITO', 'Crédito (le debemos al proveedor)'
+
     proveedor = models.ForeignKey(
         Proveedor, on_delete=models.PROTECT, related_name='facturas'
     )
     numero_factura = models.CharField(max_length=50)
     fecha = models.DateField()
+    forma_pago = models.CharField(max_length=10, choices=FormaPago.choices)
     total = models.PositiveIntegerField(default=0, editable=False)
+    pagada_en_caja = models.BooleanField(default=False, editable=False)
     observaciones = models.CharField(max_length=255, blank=True, null=True)
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='facturas_registradas'
@@ -54,6 +60,25 @@ class Factura(models.Model):
         total = self.detalles.aggregate(suma=models.Sum('subtotal'))['suma'] or 0
         self.total = total
         self.save(update_fields=['total'])
+
+    def registrar_pago_caja(self):
+        """
+        Se llama UNA SOLA VEZ, después de haber creado todos los detalles de la
+        factura. Si es a crédito o ya se registró antes, no hace nada.
+        """
+        if self.forma_pago != self.FormaPago.CONTADO or self.pagada_en_caja or self.total == 0:
+            return
+
+        from caja.models import MovimientoCaja
+        MovimientoCaja.objects.create(
+            tipo_movimiento=MovimientoCaja.TipoMovimiento.SALIDA,
+            origen=MovimientoCaja.Origen.COMPRA_CONTADO,
+            monto=self.total,
+            documento_referencia=f'Factura #{self.numero_factura}',
+            usuario=self.usuario,
+        )
+        self.pagada_en_caja = True
+        self.save(update_fields=['pagada_en_caja'])
 
 
 class DetalleFactura(models.Model):
