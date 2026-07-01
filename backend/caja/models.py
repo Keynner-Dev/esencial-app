@@ -16,6 +16,7 @@ class MovimientoCaja(models.Model):
         GASTO = 'GASTO', 'Gasto'
         PRESTAMO_OTORGADO = 'PRESTAMO_OTORGADO', 'Préstamo otorgado'
         PAGO_PRESTAMO = 'PAGO_PRESTAMO', 'Pago de préstamo recibido'
+        COBRO_PRESTAMO = 'COBRO_PRESTAMO', 'Cobro de préstamo otorgado'
         AJUSTE = 'AJUSTE', 'Ajuste manual'
 
     tipo_movimiento = models.CharField(max_length=10, choices=TipoMovimiento.choices)

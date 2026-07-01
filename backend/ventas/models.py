@@ -74,6 +74,17 @@ class Venta(models.Model):
         )
         self.pagada_en_caja = True
         self.save(update_fields=['pagada_en_caja'])
+        
+        def registrar_fiado(self):
+            """
+            Se llama UNA SOLA VEZ, después de haber creado todos los items de la venta,
+            solo si la venta es a crédito. Crea el registro de Fiado correspondiente.
+            """
+            if self.forma_pago != self.FormaPago.CREDITO or self.total == 0:
+                return
+
+            from finanzas.models import Fiado
+            Fiado.crear_desde_venta(self)
 
 
 class DetalleVentaProducto(models.Model):
